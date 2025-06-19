@@ -1,6 +1,8 @@
 #!/bin/sh
 
 #set -x
+CONFIG_FILE="/tmp/awg.conf"
+source /etc/auto_awg_git.conf
 
 check_repo() {
     printf "\033[32;1mChecking OpenWrt repo availability...\033[0m\n"
@@ -31,6 +33,43 @@ add_mark() {
     fi
 }
 
+download_config() {
+    echo "→ Downloading AWG config from $REPO_RAW_URL..."
+    curl -H "Authorization: token $GIT_TOKEN" -s -L -o "$CONFIG_FILE" "$REPO_RAW_URL"
+    if [ $? -ne 0 ]; then
+        echo "✖️ Failed to download configuration. Please check your Git token and URL."
+        exit 1
+    fi
+    echo "→ Config file downloaded successfully."
+}
+
+parse_config() {
+    # Используем grep и awk для извлечения значений из файла конфигурации
+    AWG_PRIVATE_KEY=$(grep -oP '(?<=PrivateKey = ).*' "$CONFIG_FILE")
+    AWG_IP=$(grep -oP '(?<=Address = ).*' "$CONFIG_FILE")
+    AWG_JC=$(grep -oP '(?<=Jc = ).*' "$CONFIG_FILE")
+    AWG_JMIN=$(grep -oP '(?<=Jmin = ).*' "$CONFIG_FILE")
+    AWG_JMAX=$(grep -oP '(?<=Jmax = ).*' "$CONFIG_FILE")
+    AWG_S1=$(grep -oP '(?<=S1 = ).*' "$CONFIG_FILE")
+    AWG_S2=$(grep -oP '(?<=S2 = ).*' "$CONFIG_FILE")
+    AWG_H1=$(grep -oP '(?<=H1 = ).*' "$CONFIG_FILE")
+    AWG_H2=$(grep -oP '(?<=H2 = ).*' "$CONFIG_FILE")
+    AWG_H3=$(grep -oP '(?<=H3 = ).*' "$CONFIG_FILE")
+    AWG_H4=$(grep -oP '(?<=H4 = ).*' "$CONFIG_FILE")
+    AWG_PUBLIC_KEY=$(grep -oP '(?<=PublicKey = ).*' "$CONFIG_FILE")
+    AWG_PRESHARED_KEY=$(grep -oP '(?<=PresharedKey = ).*' "$CONFIG_FILE")
+    AWG_ENDPOINT=$(grep -oP '(?<=Endpoint = ).*' "$CONFIG_FILE")
+    AWG_ENDPOINT_PORT=$(echo "$AWG_ENDPOINT" | cut -d':' -f2)
+    AWG_ENDPOINT=$(echo "$AWG_ENDPOINT" | cut -d':' -f1)
+
+    # Проверяем, что все необходимые переменные были найдены
+    if [ -z "$AWG_PRIVATE_KEY" ] || [ -z "$AWG_IP" ] || [ -z "$AWG_PUBLIC_KEY" ]; then
+        echo "✖️ Missing required configuration variables."
+        exit 1
+    fi
+}
+
+
 add_tunnel() {
     TUNNEL=awg
     printf "\033[32;1mConfiguring AmneziaWG tunnel automatically...\033[0m\n"
@@ -38,37 +77,39 @@ add_tunnel() {
     install_awg_packages
 
     route_vpn
+    download_config
+    parse_config
 
-    read -r -p "Enter the private key (from [Interface]):"$'\n' AWG_PRIVATE_KEY
+    # read -r -p "Enter the private key (from [Interface]):"$'\n' AWG_PRIVATE_KEY
 
-    while true; do
-        read -r -p "Enter internal IP address with subnet, example 192.168.100.5/24 (Address from [Interface]):"$'\n' AWG_IP
-        if echo "$AWG_IP" | egrep -oq '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]+$'; then
-            break
-        else
-            echo "This IP is not valid. Please repeat"
-        fi
-    done
+    # while true; do
+    #     read -r -p "Enter internal IP address with subnet, example 192.168.100.5/24 (Address from [Interface]):"$'\n' AWG_IP
+    #     if echo "$AWG_IP" | egrep -oq '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]+$'; then
+    #         break
+    #     else
+    #         echo "This IP is not valid. Please repeat"
+    #    fi
+    # done
 
-    read -r -p "Enter Jc value (from [Interface]):"$'\n' AWG_JC
-    read -r -p "Enter Jmin value (from [Interface]):"$'\n' AWG_JMIN
-    read -r -p "Enter Jmax value (from [Interface]):"$'\n' AWG_JMAX
-    read -r -p "Enter S1 value (from [Interface]):"$'\n' AWG_S1
-    read -r -p "Enter S2 value (from [Interface]):"$'\n' AWG_S2
-    read -r -p "Enter H1 value (from [Interface]):"$'\n' AWG_H1
-    read -r -p "Enter H2 value (from [Interface]):"$'\n' AWG_H2
-    read -r -p "Enter H3 value (from [Interface]):"$'\n' AWG_H3
-    read -r -p "Enter H4 value (from [Interface]):"$'\n' AWG_H4
+    # read -r -p "Enter Jc value (from [Interface]):"$'\n' AWG_JC
+    # read -r -p "Enter Jmin value (from [Interface]):"$'\n' AWG_JMIN
+    # read -r -p "Enter Jmax value (from [Interface]):"$'\n' AWG_JMAX
+    # read -r -p "Enter S1 value (from [Interface]):"$'\n' AWG_S1
+    # read -r -p "Enter S2 value (from [Interface]):"$'\n' AWG_S2
+    # read -r -p "Enter H1 value (from [Interface]):"$'\n' AWG_H1
+    # read -r -p "Enter H2 value (from [Interface]):"$'\n' AWG_H2
+    # read -r -p "Enter H3 value (from [Interface]):"$'\n' AWG_H3
+    # read -r -p "Enter H4 value (from [Interface]):"$'\n' AWG_H4
 
-    read -r -p "Enter the public key (from [Peer]):"$'\n' AWG_PUBLIC_KEY
-    read -r -p "If use PresharedKey, Enter this (from [Peer]). If your don't use leave blank:"$'\n' AWG_PRESHARED_KEY
-    read -r -p "Enter Endpoint host without port (Domain or IP) (from [Peer]):"$'\n' AWG_ENDPOINT
+    # read -r -p "Enter the public key (from [Peer]):"$'\n' AWG_PUBLIC_KEY
+    # read -r -p "If use PresharedKey, Enter this (from [Peer]). If your don't use leave blank:"$'\n' AWG_PRESHARED_KEY
+    # read -r -p "Enter Endpoint host without port (Domain or IP) (from [Peer]):"$'\n' AWG_ENDPOINT
 
-    read -r -p "Enter Endpoint host port (from [Peer]) [51820]:"$'\n' AWG_ENDPOINT_PORT
-    AWG_ENDPOINT_PORT=${AWG_ENDPOINT_PORT:-51820}
-    if [ "$AWG_ENDPOINT_PORT" = '51820' ]; then
-        echo $AWG_ENDPOINT_PORT
-    fi
+    # read -r -p "Enter Endpoint host port (from [Peer]) [51820]:"$'\n' AWG_ENDPOINT_PORT
+    # AWG_ENDPOINT_PORT=${AWG_ENDPOINT_PORT:-51820}
+    # if [ "$AWG_ENDPOINT_PORT" = '51820' ]; then
+    #     echo $AWG_ENDPOINT_PORT
+    # fi
     
     uci set network.awg0=interface
     uci set network.awg0.proto='amneziawg'
