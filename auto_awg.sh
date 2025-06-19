@@ -10,7 +10,7 @@ echo "→ Reading Git credentials and URL from /etc/auto_awg_git.conf"
 echo "→ Fetching awg.conf from GitHub"
 TMP_CONF="/tmp/awg.conf"
 CURL_OPTS="-sSfL"
-[ -n "$GIT_TOKEN" ] && CURL_OPTS="-H Authorization:token $GIT_TOKEN $CURL_OPTS"
+[ -n "$GIT_TOKEN" ] && CURL_OPTS="-H Authorization: token $GIT_TOKEN $CURL_OPTS"
 
 # download the config
 if ! curl $CURL_OPTS "$REPO_RAW_URL" -o "$TMP_CONF"; then
