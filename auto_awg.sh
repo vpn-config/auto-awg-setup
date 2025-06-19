@@ -3,12 +3,15 @@ set -e  # exit on error
 
 # ────────── GLOBAL SETTINGS — change if needed ──────────
 echo "→ Reading Git credentials and URL from /etc/auto_awg_git.conf"
-[ -f /etc/auto_awg_git.conf ] && . /etc/auto_awg_git.conf || {
+if [ -f /etc/auto_awg_git.conf ]; then
+    . /etc/auto_awg_git.conf
+    echo "   ✓ Credentials loaded"
+    echo "   GIT_TOKEN: $GIT_TOKEN"
+    echo "   REPO_RAW_URL: $REPO_RAW_URL"
+else
     echo "✖️  No /etc/auto_awg_git.conf found with credentials"; exit 1;
-}
+fi
 
-echo $GIT_TOKEN
-echo $REPO_RAW_URL
 
 echo "→ Fetching awg.conf from GitHub"
 TMP_CONF="/tmp/awg.conf"
