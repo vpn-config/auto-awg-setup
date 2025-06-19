@@ -48,6 +48,9 @@ AWG_H2=$(grep -E '^H2' "$TMP_CONF" | cut -d= -f2 | clean)
 AWG_H3=$(grep -E '^H3' "$TMP_CONF" | cut -d= -f2 | clean)
 AWG_H4=$(grep -E '^H4' "$TMP_CONF" | cut -d= -f2 | clean)
 
+echo " AWG_ENDPOINT: $AWG_ENDPOINT"
+echo " AWG_ENDPOINT_PORT: $AWG_ENDPOINT_PORT"
+
 # Sanity check to ensure all required fields are present
 for v in AWG_PRIVATE_KEY AWG_PUBLIC_KEY AWG_IP AWG_ENDPOINT AWG_ENDPOINT_PORT AWG_JC; do
     [ -z "$(eval echo \\$$v)" ] && { echo "✖️  $v not found in awg.conf"; exit 1; }
