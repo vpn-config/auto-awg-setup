@@ -54,28 +54,6 @@ for v in AWG_PRIVATE_KEY AWG_PUBLIC_KEY AWG_IP AWG_ENDPOINT AWG_ENDPOINT_PORT AW
 done
 echo "   ✓ awg.conf parsed OK"
 
-# ────────── INSTALLING PACKAGES ──────────
-echo "→ Installing AmneziaWG packages (if absent)"
-PKGARCH=$(opkg print-architecture | awk 'BEGIN{m=0}{if($3>m){m=$3;a=$2}}END{print a}')
-TARGET=$(ubus call system board | jsonfilter -e '@.release.target' | cut -d/ -f1)
-SUBTARGET=$(ubus call system board | jsonfilter -e '@.release.target' | cut -d/ -f2)
-VERSION=$(ubus call system board | jsonfilter -e '@.release.version')
-SUFFIX="_v${VERSION}_${PKGARCH}_${TARGET}_${SUBTARGET}.ipk"
-BASE="https://github.com/Slava-Shchipunov/awg-openwrt/releases/download/v${VERSION}"
-
-for p in amneziawg-tools kmod-amneziawg luci-app-amneziawg; do
-    if opkg list-installed | grep -q $p; then
-        echo "   → Package $p already installed"
-        continue
-    fi
-    FILE="$p$SUFFIX"
-    URL="$BASE/$FILE"
-    echo "   → downloading $FILE"
-    curl -sSfL "$URL" -o "/tmp/$FILE"
-    opkg install "/tmp/$FILE"
-    rm -f "/tmp/$FILE"
-done
-
 # ────────── CONFIGURING AWG0 ──────────
 echo "→ Configuring awg0 via UCI"
 uci set network.awg0=interface
@@ -108,21 +86,6 @@ uci set network.@amneziawg_awg0[0].endpoint_host="$AWG_ENDPOINT"
 uci set network.@amneziawg_awg0[0].allowed_ips='0.0.0.0/0'
 uci set network.@amneziawg_awg0[0].endpoint_port="$AWG_ENDPOINT_PORT"
 uci commit network
-
-# ────────── CONFIGURING FIREWALL ──────────
-echo "→ Configuring firewall zone 'awg'"
-if ! uci show firewall | grep -q "@zone.*name='awg'"; then
-    uci add firewall zone
-    uci set firewall.@zone[-1].name='awg'
-    uci set firewall.@zone[-1].network='awg0'
-    uci set firewall.@zone[-1].forward='REJECT'
-    uci set firewall.@zone[-1].output='ACCEPT'
-    uci set firewall.@zone[-1].input='REJECT'
-    uci set firewall.@zone[-1].masq='1'
-    uci set firewall.@zone[-1].mtu_fix='1'
-    uci set firewall.@zone[-1].family='ipv4'
-    uci commit firewall
-fi
 
 # ────────── RESTART NETWORK ──────────
 echo "→ Restarting network"
