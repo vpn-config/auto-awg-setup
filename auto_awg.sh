@@ -479,6 +479,8 @@ add_dns_resolver
 
 add_getdomains
 
+add_check_awg
+
 printf "\033[32;1mRestart network\033[0m\n"
 /etc/init.d/network restart
 
