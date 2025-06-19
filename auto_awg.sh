@@ -9,25 +9,35 @@ if [ -f /etc/auto_awg_git.conf ]; then
     echo "   GIT_TOKEN: $GIT_TOKEN"
     echo "   REPO_RAW_URL: $REPO_RAW_URL"
 else
-    echo "✖️  No /etc/auto_awg_git.conf found with credentials"; exit 1;
+    echo "✖️  No /etc/auto_awg_git.conf found with credentials"
+    exit 1
 fi
 
-
+# ────────── FETCHING CONFIG ──────────
 echo "→ Fetching awg.conf from GitHub"
 TMP_CONF="/tmp/awg.conf"
-CURL_OPTS="-sSfL"
-[ -n "$GIT_TOKEN" ] && CURL_OPTS="-H Authorization: token $GIT_TOKEN $CURL_OPTS"
+if [ -n "$GIT_TOKEN" ]; then
+    CURL_OPTS="-H 'Authorization: token $GIT_TOKEN' -sSfL"
+else
+    CURL_OPTS="-sSfL"
+fi
 
-# download the config
+# Download the config file
 if ! curl $CURL_OPTS "$REPO_RAW_URL" -o "$TMP_CONF"; then
-    echo "✖️  Failed to download awg.conf"; exit 1;
+    echo "✖️  Failed to download awg.conf"
+    exit 1
 else
     echo "   ✓ awg.conf downloaded successfully"
 fi
 
-# parse key-value pairs (remove CR, spaces)
+# ────────── PARSING CONFIG ──────────
 echo "→ Parsing awg.conf"
-clean() { sed 's/\r//;s/^ *//;s/ *$//'; }
+
+clean() {
+    sed 's/\r//;s/^ *//;s/ *$//'
+}
+
+# Parse configuration values
 AWG_PRIVATE_KEY=$(grep -E '^PrivateKey' "$TMP_CONF" | cut -d= -f2 | clean)
 AWG_IP=$(grep -E '^Address' "$TMP_CONF" | cut -d= -f2 | clean)
 ENDPOINT_LINE=$(grep -E '^Endpoint' "$TMP_CONF" | cut -d= -f2 | clean)
@@ -45,12 +55,13 @@ AWG_H2=$(grep -E '^H2' "$TMP_CONF" | cut -d= -f2 | clean)
 AWG_H3=$(grep -E '^H3' "$TMP_CONF" | cut -d= -f2 | clean)
 AWG_H4=$(grep -E '^H4' "$TMP_CONF" | cut -d= -f2 | clean)
 
-# sanity check
+# Sanity check to ensure all required fields are present
 for v in AWG_PRIVATE_KEY AWG_PUBLIC_KEY AWG_IP AWG_ENDPOINT AWG_ENDPOINT_PORT AWG_JC; do
     [ -z "$(eval echo \\$$v)" ] && { echo "✖️  $v not found in awg.conf"; exit 1; }
 done
 echo "   ✓ awg.conf parsed OK"
 
+# ────────── INSTALLING PACKAGES ──────────
 echo "→ Installing AmneziaWG packages (if absent)"
 PKGARCH=$(opkg print-architecture | awk 'BEGIN{m=0}{if($3>m){m=$3;a=$2}}END{print a}')
 TARGET=$(ubus call system board | jsonfilter -e '@.release.target' | cut -d/ -f1)
@@ -58,15 +69,21 @@ SUBTARGET=$(ubus call system board | jsonfilter -e '@.release.target' | cut -d/ 
 VERSION=$(ubus call system board | jsonfilter -e '@.release.version')
 SUFFIX="_v${VERSION}_${PKGARCH}_${TARGET}_${SUBTARGET}.ipk"
 BASE="https://github.com/Slava-Shchipunov/awg-openwrt/releases/download/v${VERSION}"
+
 for p in amneziawg-tools kmod-amneziawg luci-app-amneziawg; do
-    opkg list-installed | grep -q $p && continue
-    FILE="$p$SUFFIX"; URL="$BASE/$FILE"
+    if opkg list-installed | grep -q $p; then
+        echo "   → Package $p already installed"
+        continue
+    fi
+    FILE="$p$SUFFIX"
+    URL="$BASE/$FILE"
     echo "   → downloading $FILE"
     curl -sSfL "$URL" -o "/tmp/$FILE"
     opkg install "/tmp/$FILE"
     rm -f "/tmp/$FILE"
 done
 
+# ────────── CONFIGURING AWG0 ──────────
 echo "→ Configuring awg0 via UCI"
 uci set network.awg0=interface
 uci set network.awg0.proto='amneziawg'
@@ -84,7 +101,10 @@ uci set network.awg0.awg_h2=$AWG_H2
 uci set network.awg0.awg_h3=$AWG_H3
 uci set network.awg0.awg_h4=$AWG_H4
 
-if ! uci show network | grep -q amneziawg_awg0; then uci add network amneziawg_awg0; fi
+if ! uci show network | grep -q amneziawg_awg0; then 
+    uci add network amneziawg_awg0
+fi
+
 uci set network.@amneziawg_awg0[0]=amneziawg_awg0
 uci set network.@amneziawg_awg0[0].name='awg0_client'
 uci set network.@amneziawg_awg0[0].public_key="$AWG_PUBLIC_KEY"
@@ -96,6 +116,7 @@ uci set network.@amneziawg_awg0[0].allowed_ips='0.0.0.0/0'
 uci set network.@amneziawg_awg0[0].endpoint_port="$AWG_ENDPOINT_PORT"
 uci commit network
 
+# ────────── CONFIGURING FIREWALL ──────────
 echo "→ Configuring firewall zone 'awg'"
 if ! uci show firewall | grep -q "@zone.*name='awg'"; then
     uci add firewall zone
@@ -110,6 +131,7 @@ if ! uci show firewall | grep -q "@zone.*name='awg'"; then
     uci commit firewall
 fi
 
+# ────────── RESTART NETWORK ──────────
 echo "→ Restarting network"
 /etc/init.d/network restart
 
