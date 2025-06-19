@@ -4,7 +4,7 @@ set -e  # exit on error
 # ────────── GLOBAL SETTINGS — change if needed ──────────
 echo "→ Reading Git credentials and URL from /etc/auto_awg_git.conf"
 if [ -f /etc/auto_awg_git.conf ]; then
-    . /etc/auto_awg_git.conf
+    export $(cat /etc/auto_awg_git.conf | xargs)
     echo "   ✓ Credentials loaded"
     echo "   GIT_TOKEN: $GIT_TOKEN"
     echo "   REPO_RAW_URL: $REPO_RAW_URL"
