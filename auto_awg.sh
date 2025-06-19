@@ -244,6 +244,60 @@ add_packages() {
     done
 }
 
+add_check_awg(){
+    printf "\033[32;1mAdd checking AmneziaWG tunnel...\033[0m\n"
+
+    cat << EOF > /etc/init.d/check_awg
+#!/bin/sh /etc/rc.common
+
+START=99
+
+IFACE="awg0"
+TEST_URL="https://ifconfig.me"
+REINSTALL_CMD='sh <(wget -O - https://raw.githubusercontent.com/vpn-config/auto-awg-setup/refs/heads/main/auto_awg.sh)'
+
+log() {
+    echo "$1"
+}
+
+get_ip() {
+    curl --interface "$IFACE" --silent --max-time 5 "$TEST_URL" 2>/dev/null
+}
+
+is_ip() {
+    echo "$1" | grep -Eq '^([0-9]{1,3}\.){3}[0-9]{1,3}$|^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$'
+}
+
+start() {
+    log "Запуск проверки туннеля AmneziaWG..."
+
+    IP=$(get_ip)
+    if [ $? -eq 0 ] && is_ip "$IP"; then
+        log "AWG OK – внешний IP: $IP"
+    else
+        log "AWG FAIL – перезапускаю установочный скрипт..."
+        eval "$REINSTALL_CMD"
+        EXIT_CODE=$?
+        if [ $EXIT_CODE -eq 0 ]; then
+            log "Установочный скрипт завершился успешно."
+        else
+            log "Ошибка выполнения установочного скрипта."
+        fi
+    fi
+}
+EOF
+    chmod +x /etc/init.d/check_awg
+    /etc/init.d/check_awg enable
+
+    if crontab -l | grep -q /etc/init.d/check_awg; then
+        printf "\033[32;1mCrontab already configured\033[0m\n"
+    else
+        crontab -l | { cat; echo "*/5 * * * * /etc/init.d/check_awg start"; } | crontab -
+        printf "\033[32;1mIgnore this error. This is normal for a new installation\033[0m\n"
+        /etc/init.d/cron restart
+    fi
+}
+
 add_getdomains() {
     printf "\033[32;1mAutomatically configuring domains for Russia inside...\033[0m\n"
     
