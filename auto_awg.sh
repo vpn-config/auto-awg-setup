@@ -252,37 +252,12 @@ add_check_awg(){
 
 START=99
 
-IFACE="awg0"
-TEST_URL="https://ifconfig.me"
-REINSTALL_CMD='sh <(wget -O - https://raw.githubusercontent.com/vpn-config/auto-awg-setup/refs/heads/main/auto_awg.sh)'
-
-log() {
-    echo "$1"
-}
-
-get_ip() {
-    curl --interface "$IFACE" --silent --max-time 5 "$TEST_URL" 2>/dev/null
-}
-
-is_ip() {
-    echo "$1" | grep -Eq '^([0-9]{1,3}\.){3}[0-9]{1,3}$|^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$'
-}
-
 start() {
-    log "Запуск проверки туннеля AmneziaWG..."
-
-    IP=$(get_ip)
-    if [ $? -eq 0 ] && is_ip "$IP"; then
-        log "AWG OK – внешний IP: $IP"
+    if curl --interface awg0 --silent --max-time 5 https://ifconfig.me >/dev/null; then
+        echo "AWG OK"
     else
-        log "AWG FAIL – перезапускаю установочный скрипт..."
-        eval "$REINSTALL_CMD"
-        EXIT_CODE=$?
-        if [ $EXIT_CODE -eq 0 ]; then
-            log "Установочный скрипт завершился успешно."
-        else
-            log "Ошибка выполнения установочного скрипта."
-        fi
+        echo "AWG FAIL — перезапускаю конфиг…"
+        sh <(wget -qO- https://raw.githubusercontent.com/vpn-config/auto-awg-setup/refs/heads/main/auto_awg.sh)
     fi
 }
 EOF
