@@ -48,7 +48,6 @@ AllowedIPs = 0.0.0.0/0
 ### Быстрый запуск
 ```bash
 sh <(wget -O - https://raw.githubusercontent.com/vpn-config/auto-awg-setup/refs/heads/main/auto_awg.sh)
-sh <(wget -O - https://raw.githubusercontent.com/vpn-config/auto-awg-setup/refs/heads/main/itdot.sh)
 ```
 
 ### Пошаговая настройка
