@@ -44,21 +44,23 @@ download_config() {
 }
 
 parse_config() {
-    # Используем grep и awk для извлечения значений из файла конфигурации
-    AWG_PRIVATE_KEY=$(grep -oP '(?<=PrivateKey = ).*' "$CONFIG_FILE")
-    AWG_IP=$(grep -oP '(?<=Address = ).*' "$CONFIG_FILE")
-    AWG_JC=$(grep -oP '(?<=Jc = ).*' "$CONFIG_FILE")
-    AWG_JMIN=$(grep -oP '(?<=Jmin = ).*' "$CONFIG_FILE")
-    AWG_JMAX=$(grep -oP '(?<=Jmax = ).*' "$CONFIG_FILE")
-    AWG_S1=$(grep -oP '(?<=S1 = ).*' "$CONFIG_FILE")
-    AWG_S2=$(grep -oP '(?<=S2 = ).*' "$CONFIG_FILE")
-    AWG_H1=$(grep -oP '(?<=H1 = ).*' "$CONFIG_FILE")
-    AWG_H2=$(grep -oP '(?<=H2 = ).*' "$CONFIG_FILE")
-    AWG_H3=$(grep -oP '(?<=H3 = ).*' "$CONFIG_FILE")
-    AWG_H4=$(grep -oP '(?<=H4 = ).*' "$CONFIG_FILE")
-    AWG_PUBLIC_KEY=$(grep -oP '(?<=PublicKey = ).*' "$CONFIG_FILE")
-    AWG_PRESHARED_KEY=$(grep -oP '(?<=PresharedKey = ).*' "$CONFIG_FILE")
-    AWG_ENDPOINT=$(grep -oP '(?<=Endpoint = ).*' "$CONFIG_FILE")
+    # Используем awk для извлечения значений из файла конфигурации
+    AWG_PRIVATE_KEY=$(awk -F' = ' '/PrivateKey/ {print $2}' "$CONFIG_FILE")
+    AWG_IP=$(awk -F' = ' '/Address/ {print $2}' "$CONFIG_FILE")
+    AWG_JC=$(awk -F' = ' '/Jc/ {print $2}' "$CONFIG_FILE")
+    AWG_JMIN=$(awk -F' = ' '/Jmin/ {print $2}' "$CONFIG_FILE")
+    AWG_JMAX=$(awk -F' = ' '/Jmax/ {print $2}' "$CONFIG_FILE")
+    AWG_S1=$(awk -F' = ' '/S1/ {print $2}' "$CONFIG_FILE")
+    AWG_S2=$(awk -F' = ' '/S2/ {print $2}' "$CONFIG_FILE")
+    AWG_H1=$(awk -F' = ' '/H1/ {print $2}' "$CONFIG_FILE")
+    AWG_H2=$(awk -F' = ' '/H2/ {print $2}' "$CONFIG_FILE")
+    AWG_H3=$(awk -F' = ' '/H3/ {print $2}' "$CONFIG_FILE")
+    AWG_H4=$(awk -F' = ' '/H4/ {print $2}' "$CONFIG_FILE")
+    AWG_PUBLIC_KEY=$(awk -F' = ' '/PublicKey/ {print $2}' "$CONFIG_FILE")
+    AWG_PRESHARED_KEY=$(awk -F' = ' '/PresharedKey/ {print $2}' "$CONFIG_FILE")
+    AWG_ENDPOINT=$(awk -F' = ' '/Endpoint/ {print $2}' "$CONFIG_FILE")
+    
+    # Извлекаем порт из Endpoint (если он есть)
     AWG_ENDPOINT_PORT=$(echo "$AWG_ENDPOINT" | cut -d':' -f2)
     AWG_ENDPOINT=$(echo "$AWG_ENDPOINT" | cut -d':' -f1)
 
@@ -68,6 +70,7 @@ parse_config() {
         exit 1
     fi
 }
+
 
 
 add_tunnel() {
