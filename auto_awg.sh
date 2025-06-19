@@ -16,14 +16,7 @@ fi
 # ────────── FETCHING CONFIG ──────────
 echo "→ Fetching awg.conf from GitHub"
 TMP_CONF="/tmp/awg.conf"
-if [ -n "$GIT_TOKEN" ]; then
-    CURL_OPTS="-H 'Authorization: token $GIT_TOKEN' -sSfL"
-else
-    CURL_OPTS="-sSfL"
-fi
-
-# Download the config file
-if ! curl $CURL_OPTS "$REPO_RAW_URL" -o "$TMP_CONF"; then
+if ! curl -H "Authorization: token $GIT_TOKEN" -sSfL "$REPO_RAW_URL" -o "$TMP_CONF"; then
     echo "✖️  Failed to download awg.conf"
     exit 1
 else
