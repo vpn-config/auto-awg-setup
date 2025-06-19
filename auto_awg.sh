@@ -7,6 +7,9 @@ echo "→ Reading Git credentials and URL from /etc/auto_awg_git.conf"
     echo "✖️  No /etc/auto_awg_git.conf found with credentials"; exit 1;
 }
 
+echo $GIT_TOKEN
+echo $REPO_RAW_URL
+
 echo "→ Fetching awg.conf from GitHub"
 TMP_CONF="/tmp/awg.conf"
 CURL_OPTS="-sSfL"
